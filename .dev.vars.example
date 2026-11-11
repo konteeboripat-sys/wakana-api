@@ -1,0 +1,16 @@
+# คัดลอกเป็น .dev.vars (ไม่ commit) — ใช้กับ `pnpm run dev` ในเครื่องเท่านั้น
+
+# เข้า /back ในเครื่องโดยไม่ผ่าน Cloudflare Access
+# มีผลเฉพาะเมื่อเปิดผ่าน localhost/127.0.0.1 และยังไม่ได้ตั้ง ACCESS_TEAM_DOMAIN/ACCESS_AUD
+ADMIN_DEV_EMAIL=dev@localhost
+
+# ให้หน้าเว็บที่รันในเครื่อง (wakana-site: pnpm run preview) ยิง /orders ได้
+ALLOWED_ORIGINS=https://www.wakanafooddelivery.com,https://wakanafooddelivery.com,https://wakana-site.wakanafooddelivery.workers.dev,http://localhost:8788,http://127.0.0.1:8788
+
+# token ที่ build หน้าเว็บในเครื่องใช้เรียก /export/products (ค่าจริงตั้งด้วย `wrangler secret put EXPORT_TOKEN`)
+EXPORT_TOKEN=local-dev-export-token
+# ให้หลังบ้านในเครื่องทำงานกับหน้าเว็บในเครื่อง (wakana-site: pnpm run preview --port 8788 + pnpm run dev:hook)
+# ไม่ตั้ง = เทียบ/คิดราคากับเว็บทดสอบบน workers.dev และปุ่ม "อัปเดตหน้าเว็บ" บอกให้ build เอง
+# 127.0.0.1 ไม่ใช่ localhost: wrangler dev ของเว็บฟังแค่ IPv4 แต่ workerd แปลง localhost เป็น ::1 ⇒ โหลด catalog ไม่ได้
+SITE_ORIGIN=http://127.0.0.1:8788
+DEPLOY_HOOK_URL=http://127.0.0.1:8789/rebuild

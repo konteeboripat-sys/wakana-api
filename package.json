@@ -1,0 +1,32 @@
+{
+  "name": "wakana-api",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "description": "API + หลังบ้านของ wakanafooddelivery.com บน Cloudflare Workers (TypeScript + D1) — แยกจากเว็บ wakana-site",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts",
+    "customers:to-sql": "node scripts/import-customers.mjs",
+    "orders:to-sql": "node scripts/import-orders.mjs",
+    "promotions:to-sql": "node scripts/import-promotions.mjs",
+    "products:web-to-sql": "node scripts/import-products-web.mjs",
+    "products:legacy-to-sql": "node scripts/import-products-legacy.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply wakana --local",
+    "db:migrate:remote": "wrangler d1 migrations apply wakana --remote"
+  },
+  "dependencies": {
+    "jose": "^6.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.124.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

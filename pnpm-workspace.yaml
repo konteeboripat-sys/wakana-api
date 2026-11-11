@@ -1,0 +1,6 @@
+# pnpm 11 ต้องตัดสินรายตัวว่าแพ็กเกจไหนรัน build script ได้ — ไม่ตัดสิน = pnpm install ล้ม (ERR_PNPM_IGNORED_BUILDS)
+allowBuilds:
+  esbuild: true
+  # workerd = รันไทม์ Cloudflare สำหรับ `wrangler dev` + D1 จำลองในเครื่อง (ต่างจาก wakana-site ที่ปิดไว้ — โปรเจกต์นี้ต้องเทสกับ D1)
+  workerd: true
+  sharp: false

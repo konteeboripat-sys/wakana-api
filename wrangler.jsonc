@@ -1,0 +1,103 @@
+{
+	"name": "wakana-api",
+	// บัญชี Cloudflare ของ boriphat.ko@foodproject.co.th (ย้ายจาก kboripat 2026-10-22) — wrangler ล็อกอินผิดบัญชีจะ error แทนที่จะ deploy ผิดที่
+	"account_id": "24b164b26b5e9fdda4e72c67bf6b7c3f",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-01",
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		// เว็บหลัก (ใช้ทำ URL รูป/ลิงก์ใน /products · โหลด catalog.js เมื่อ PRICE_SOURCE = catalog)
+		// 2026-10-26 สลับโดเมนแล้ว: www ผ่าน Workers Route ไป wakana-site (บัญชี fc867a92 ที่ถือโซน)
+		"SITE_ORIGIN": "https://www.wakanafooddelivery.com",
+		// "d1" = ราคาจากหลังบ้าน (ตาราง products) — หน้าเว็บดึง GET /products มาแก้ราคา/ชื่อ/รูป/ซ่อนสินค้าที่ปิดขายเอง (wakana-site/src/cart/live-catalog.js)
+		// ⇒ ลูกค้าเห็นและจ่ายราคาหลังบ้านโดยไม่ต้องรอ build · "catalog" = ราคาจาก catalog.js ของเว็บ (แบบเดิม)
+		"PRICE_SOURCE": "d1",
+		// หน้าเว็บที่ยิง POST /orders ได้ (คั่นด้วย ,)
+		"ALLOWED_ORIGINS": "https://www.wakanafooddelivery.com,https://wakanafooddelivery.com,https://wakana-site.wakanafooddelivery.workers.dev,https://wakana-site.kboripat.workers.dev,https://wakana-site.wakana-site.workers.dev",
+		// กติกาเดียวกับตะกร้า (wakana-site/src/cart/cart-ui.js) — แก้ที่หนึ่งต้องแก้อีกที่
+		"SERVICE_OPEN": "09:00",
+		"SERVICE_CLOSE": "19:00",
+		"PARTY_CATEGORY": "party-set",
+		"PARTY_LEAD_MINUTES": "120",
+		// Cloudflare Access ที่คุม /back — ว่าง = /back ใช้ไม่ได้ (ยกเว้น ADMIN_DEV_EMAIL ใน .dev.vars ตอนรันในเครื่อง)
+		// ACCESS_TEAM_DOMAIN เช่น https://<team>.cloudflareaccess.com · ACCESS_AUD = Application Audience (AUD) Tag ของแอปใน Access
+		"ACCESS_TEAM_DOMAIN": "",
+		"ACCESS_AUD": "",
+		// หน้า /back/login (ยังไม่ตั้ง Access): รับชื่อผู้ใช้นี้ชื่อเดียว · รหัสผ่าน = secret ADMIN_PASSWORD
+		"ADMIN_USERNAME": "misadmin"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "wakana",
+			// ค่าจริงได้จาก `pnpm exec wrangler d1 create wakana` (ต้องทำก่อน deploy) · ค่านี้ใช้ได้แค่ D1 จำลองในเครื่อง
+			"database_id": "690f5953-a66d-49e8-af0a-30f09fa26245",
+			"remote": true, // ชั่วคราว: หลังบ้านในเครื่องอ่าน/เขียน D1 จริง — เอาออกหลังใช้
+			"migrations_dir": "migrations"
+		},
+		{
+			"binding": "wakana",
+			"database_name": "wakana",
+			"database_id": "690f5953-a66d-49e8-af0a-30f09fa26245"
+		}
+	],
+	// รูปที่อัปโหลดจากหลังบ้าน เสิร์ฟที่ /media/products/<uuid>.<ext>
+	// ก่อน deploy: `pnpm exec wrangler r2 bucket create wakana-images` · ในเครื่อง wrangler dev จำลองให้เอง
+	// ปิดชั่วคราว 2026-10-15: บัญชียังสร้าง R2 bucket ไม่ได้ (error 10042) ⇒ อัปโหลดรูป/เสิร์ฟ /media ใช้ไม่ได้จนกว่าจะเปิดกลับ
+	// "r2_buckets": [
+	// 	{
+	// 		"binding": "IMAGES",
+	// 		"bucket_name": "wakana-images"
+	// 	}
+	// ],
+	// 2026-10-22: ใช้ Workers KV เก็บรูปแทน R2 (บัญชี foodproject ยังได้ error 10042) — media.ts เลือก R2 ก่อนถ้าเปิดกลับ
+	"kv_namespaces": [
+		{
+			"binding": "IMAGES_KV",
+			"id": "880c34d8bf2c4162ab1cb3a7e47c365b",
+			"remote": true // wrangler dev ในเครื่องอ่าน/เขียน KV จริง (คู่กับ DB ที่ remote อยู่แล้ว — รูปในเครื่องกับบนเว็บจริงตรงกัน)
+		}
+	],
+	// อัปเดตหน้าเว็บอัตโนมัติ: ทุกนาทีดูว่ามีการแก้สินค้าที่ยังไม่ขึ้นเว็บไหม → สั่ง deploy hook (รวมการแก้หลายครั้งเป็น build เดียว)
+	"triggers": {
+		"crons": [
+			"* * * * *"
+		]
+	},
+	// กันยิงออเดอร์รัว: 10 ครั้ง/นาที/IP
+	"ratelimits": [
+		{
+			"name": "ORDER_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 10,
+				"period": 60
+			}
+		},
+		// หลังบ้านแบบรหัสผ่าน (ADMIN_PASSWORD): 60 คำขอ/นาที/IP — กดใช้งานปกติไม่ถึง · เดารหัสรัวโดนตัด
+		{
+			"name": "ADMIN_LOGIN_LIMITER",
+			"namespace_id": "1002",
+			"simple": {
+				"limit": 60,
+				"period": 60
+			}
+		},
+		// ฟอร์มติดต่อ (POST /contact): 5 ครั้ง/นาที/IP — คนจริงส่งครั้งเดียว · บอทยิงรัวโดนตัด
+		{
+			"name": "CONTACT_LIMITER",
+			"namespace_id": "1003",
+			"simple": {
+				"limit": 5,
+				"period": 60
+			}
+		}
+	]
+	// ตอนเปิดใช้จริง: ผูก subdomain (โซนอยู่ Cloudflare แล้ว — Cloudflare สร้างเรคคอร์ด DNS ให้เอง)
+	// ⚠ 2026-10-22: deploy ได้ error 10083 "zone does not exist on your account" (บัญชี foodproject 24b164b2) แม้หลังแจ้งว่าย้ายโซนแล้ว
+	// เปิดกลับ: เอา // ออกทั้งสองบรรทัดล่าง ("workers_dev" ต้องคู่กัน — ตั้ง routes แล้ว wrangler ปิด workers.dev เป็นค่าเริ่ม แต่เว็บยังยิง API ทาง workers.dev)
+	// ,"routes": [{ "pattern": "api.wakanafooddelivery.com", "zone_name": "wakanafooddelivery.com", "custom_domain": true }]
+	// ,"workers_dev": true
+}

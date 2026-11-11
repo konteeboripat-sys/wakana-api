@@ -1,0 +1,7 @@
+node_modules/
+.wrangler/
+.dev.vars
+# ไฟล์นำเข้าสมาชิกเว็บเดิม = ข้อมูลส่วนบุคคล ห้าม commit
+*.csv
+import-*.sql
+customers*.sql
